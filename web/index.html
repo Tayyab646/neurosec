@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>AgentFirewall v2 | Multi-Agent Trust Network</title>
+  <link rel="stylesheet" href="/assets/styles.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">AF</div>
+    <div><h1>AgentFirewall</h1><p>AI Immune System</p></div>
+  </div>
+  <nav class="nav">
+    <span class="nav-label">Main</span>
+    <button class="nav-item active" data-tab="overview"><span class="nav-icon">◈</span>Overview</button>
+    <button class="nav-item" data-tab="console"><span class="nav-icon">⊕</span>Live Firewall</button>
+    <button class="nav-item" data-tab="audit"><span class="nav-icon">≡</span>Audit Logs</button>
+    <span class="nav-label">Security</span>
+    <button class="nav-item" data-tab="redteam"><span class="nav-icon">⚡</span>Red Team</button>
+    <button class="nav-item" data-tab="drift"><span class="nav-icon">∿</span>Intent Drift</button>
+    <button class="nav-item" data-tab="blast"><span class="nav-icon">◎</span>Blast Radius</button>
+    <button class="nav-item" data-tab="causal"><span class="nav-icon">⬡</span>Causal Graph</button>
+    <span class="nav-label">Config</span>
+    <button class="nav-item" data-tab="policy"><span class="nav-icon">⊞</span>Policy Matrix</button>
+    <button class="nav-item" data-tab="architecture"><span class="nav-icon">⬢</span>Architecture</button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="status-pill">
+      <div class="pulse"></div>
+      <div><strong>All Systems Live</strong><small id="sessionIdLabel">sess_…</small></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <p class="eyebrow">Multi-Agent Trust Network · Real-Time AI Security</p>
+      <h2>AgentFirewall <span style="color:var(--cyan)">v2</span></h2>
+    </div>
+    <div class="top-right">
+      <div class="session-chip"><span class="chip-dot"></span><span id="sessionChip">sess_…</span></div>
+      <button class="btn-ghost" id="refreshBtn">↻ Refresh</button>
+      <button class="btn-danger" id="clearLogsBtn">Clear Logs</button>
+    </div>
+  </header>
+
+  <!-- OVERVIEW -->
+  <section class="tab-panel active" id="overview">
+    <div class="metric-grid gap-md">
+      <div class="metric-card c-cyan">
+        <div class="metric-top"><div class="metric-icon c-cyan">⬡</div><span class="metric-trend neu" id="tTotal">—</span></div>
+        <div class="metric-val" id="mTotal">0</div>
+        <div class="metric-label">Total Events</div>
+        <div class="sparkline"><canvas id="spTotal"></canvas></div>
+      </div>
+      <div class="metric-card c-green">
+        <div class="metric-top"><div class="metric-icon c-green">✓</div><span class="metric-trend up" id="tAllowed">—</span></div>
+        <div class="metric-val c-green" id="mAllowed">0</div>
+        <div class="metric-label">Allowed</div>
+        <div class="sparkline"><canvas id="spAllowed"></canvas></div>
+      </div>
+      <div class="metric-card c-yellow">
+        <div class="metric-top"><div class="metric-icon c-yellow">⚠</div><span class="metric-trend neu" id="tWarned">—</span></div>
+        <div class="metric-val c-yellow" id="mWarned">0</div>
+        <div class="metric-label">Warnings</div>
+        <div class="sparkline"><canvas id="spWarned"></canvas></div>
+      </div>
+      <div class="metric-card c-red">
+        <div class="metric-top"><div class="metric-icon c-red">✕</div><span class="metric-trend down" id="tBlocked">—</span></div>
+        <div class="metric-val c-red" id="mBlocked">0</div>
+        <div class="metric-label">Blocked</div>
+        <div class="sparkline"><canvas id="spBlocked"></canvas></div>
+      </div>
+      <div class="metric-card c-purple">
+        <div class="metric-top"><div class="metric-icon c-purple">◎</div><span class="metric-trend neu" id="tAvg">—</span></div>
+        <div class="metric-val" id="mAvgRisk">0</div>
+        <div class="metric-label">Avg Risk Score</div>
+        <div class="sparkline"><canvas id="spRisk"></canvas></div>
+      </div>
+    </div>
+
+    <div class="two-col gap-md">
+      <div class="card">
+        <div class="card-head">
+          <div><h3>Risk Score Trend</h3><p>Risk levels across recent decisions</p></div>
+          <span style="font-size:.7rem;color:var(--text-3);font-family:'JetBrains Mono',monospace">Last 20 events</span>
+        </div>
+        <div class="card-body"><div class="chart-wrap" style="height:180px"><canvas id="chartRiskTrend"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3>Threat Categories</h3><p>Distribution of detected attack types</p></div></div>
+        <div class="card-body" style="display:flex;gap:20px;align-items:center">
+          <div class="chart-wrap" style="width:160px;height:160px;flex-shrink:0"><canvas id="chartThreat"></canvas></div>
+          <div id="threatLegend" style="flex:1;font-size:.76rem;line-height:2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><div><h3>Recent Decisions</h3><p>Latest firewall decisions</p></div></div>
+        <div class="card-body" style="padding-top:8px"><div id="recentDecisions"><p class="empty-state">No events yet.</p></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3>System Health</h3><p>All firewall layers status</p></div></div>
+        <div class="card-body" style="padding-top:8px">
+          <div class="health-row"><span>Input Firewall</span><span class="hbadge ok">Healthy</span></div>
+          <div class="health-row"><span>Output Firewall</span><span class="hbadge ok">Healthy</span></div>
+          <div class="health-row"><span>Cross-Agent Firewall</span><span class="hbadge ok">Healthy</span></div>
+          <div class="health-row"><span>Intent Drift Analyzer</span><span class="hbadge ok">Healthy</span></div>
+          <div class="health-row"><span>Blast Radius Engine</span><span class="hbadge ok">Healthy</span></div>
+          <div class="health-row"><span>Causal Attack Graph</span><span class="hbadge ok">Healthy</span></div>
+          <div class="health-row"><span>Audit Database</span><span class="hbadge ok">Healthy</span></div>
+          <div class="health-row"><span>Trust Token System</span><span class="hbadge ok">Healthy</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE FIREWALL -->
+  <section class="tab-panel" id="console">
+    <div class="workspace">
+      <div class="card">
+        <div class="card-head"><div><h3>Live AI Agent Firewall</h3><p>Send a prompt through the full pipeline</p></div></div>
+        <div class="card-body">
+          <div style="display:grid;gap:14px">
+            <div class="form-grid">
+              <label>User Role
+                <select id="roleSelect">
+                  <option value="guest">Guest</option>
+                  <option value="student">Student</option>
+                  <option value="employee">Employee</option>
+                  <option value="security_analyst" selected>Security Analyst</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </label>
+              <label>Agent Tool
+                <select id="toolSelect">
+                  <option value="chat_only">Chat Only</option>
+                  <option value="knowledge_search">Knowledge Search</option>
+                  <option value="summarize_report">Summarize Report</option>
+                  <option value="send_email">Send Email</option>
+                  <option value="read_database">Read Database</option>
+                  <option value="execute_code">Execute Code</option>
+                  <option value="export_logs">Export Audit Logs</option>
+                  <option value="admin_override">Admin Override</option>
+                </select>
+              </label>
+            </div>
+            <label>Target Resource<input id="targetInput" value="general" placeholder="e.g., production database"/></label>
+            <label>Prompt<textarea id="promptInput" rows="7" placeholder="Type a request or pick a template…"></textarea></label>
+            <div class="chip-row">
+              <button class="chip" data-template="safe">✓ Safe</button>
+              <button class="chip" data-template="injection">⚠ Injection</button>
+              <button class="chip" data-template="database">⚡ Exfiltration</button>
+              <button class="chip" data-template="secrets">🔑 Secrets</button>
+              <button class="chip" data-template="drift">∿ Drift</button>
+            </div>
+            <button class="btn-primary wide" id="analyzeBtn">Analyze Through AgentFirewall</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3>Decision Report</h3><p>Risk score, blast radius, detections</p></div></div>
+        <div class="card-body">
+          <div id="decisionReport" class="placeholder-box">
+            <div class="placeholder-icon">🛡️</div>
+            <h4>Firewall Ready</h4>
+            <p>Submit a prompt to generate a decision report</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AUDIT -->
+  <section class="tab-panel" id="audit">
+    <div class="card">
+      <div class="card-head">
+        <div><h3>Immutable Audit Trail</h3><p>Every decision stored in SQLite</p></div>
+        <button class="btn-secondary" id="exportLogsBtn">↓ Export JSON</button>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Time</th><th>Decision</th><th>Risk</th><th>Blast</th><th>Drift</th><th>Role</th><th>Tool</th><th>Detections</th></tr></thead>
+            <tbody id="auditTableBody"><tr><td colspan="8" class="empty-cell">No audit events yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RED TEAM -->
+  <section class="tab-panel" id="redteam">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><div><h3>Red Team Suite</h3><p>Built-in attacks + Adversarial Co-Evolution</p></div></div>
+        <div class="card-body">
+          <button class="btn-primary wide" style="margin-bottom:12px" id="runRedTeamBtn">▶ Run Static Red-Team Suite</button>
+          <div id="redTeamCases"></div>
+          <hr class="divider"/>
+          <p style="font-size:.86rem;font-weight:700;margin-bottom:4px;color:var(--text)">🔴🔵 Adversarial Co-Evolution</p>
+          <p style="font-size:.76rem;color:var(--text-3);margin-bottom:12px">Red Agent attacks · Blue Agent evolves defense rules</p>
+          <div class="form-grid" style="margin-bottom:10px">
+            <label>Role<select id="autoRtRole"><option value="employee">Employee</option><option value="security_analyst">Security Analyst</option><option value="guest">Guest</option></select></label>
+            <label>Rounds<select id="autoRtRounds"><option value="2">2 rounds</option><option value="3" selected>3 rounds</option><option value="5">5 rounds</option></select></label>
+          </div>
+          <button class="btn-accent wide" id="runAutoRedTeamBtn">⚡ Run Adversarial Co-Evolution</button>
+          <div id="autoRedTeamResults" style="margin-top:14px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3>Results</h3><p>Measurable protection outcomes</p></div><div id="rtSummary"></div></div>
+        <div class="card-body">
+          <div class="chart-wrap gap-md" style="height:140px"><canvas id="chartRedTeam"></canvas></div>
+          <div id="redTeamResults"><p class="empty-state">Run the suite to see results.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTENT DRIFT -->
+  <section class="tab-panel" id="drift">
+    <div class="card">
+      <div class="card-head"><div><h3>Intent Drift Analyzer</h3><p>Tracks semantic velocity of conversation intent to detect gradual multi-turn attacks</p></div></div>
+      <div class="card-body">
+        <div class="info-banner cyan">
+          <strong>How it works:</strong> Normal conversation stays consistent. An attack trajectory:
+          <em>"help with reports"</em> → <em>"show user data"</em> → <em>"export all records to my email"</em>.
+          Each step looks safe — the <strong>drift vector</strong> reveals the attack.
+        </div>
+        <div class="two-col gap-md">
+          <div>
+            <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:10px">Drift Score Over Turns</p>
+            <div class="chart-wrap" style="height:200px"><canvas id="chartDrift"></canvas></div>
+          </div>
+          <div id="driftStats"><p class="empty-state">Send prompts through Live Firewall to build history.</p></div>
+        </div>
+        <div id="driftTurns" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BLAST RADIUS -->
+  <section class="tab-panel" id="blast">
+    <div class="card">
+      <div class="card-head">
+        <div><h3>Blast Radius Estimator</h3><p>Maximum damage if agent is compromised from this exact state</p></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="blastRoleSelect" class="inline-select">
+            <option value="guest">Guest</option><option value="student">Student</option>
+            <option value="employee" selected>Employee</option>
+            <option value="security_analyst">Security Analyst</option><option value="admin">Admin</option>
+          </select>
+          <button class="btn-secondary" id="loadBlastBtn">Load</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="two-col gap-md">
+          <div>
+            <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:10px">Radar View</p>
+            <div class="chart-wrap" style="height:260px"><canvas id="chartBlastRadar"></canvas></div>
+          </div>
+          <div>
+            <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:10px">Score by Tool</p>
+            <div class="chart-wrap" style="height:260px"><canvas id="chartBlastBar"></canvas></div>
+          </div>
+        </div>
+        <div id="blastGrid" class="blast-grid" style="margin-top:18px"><p class="empty-state">Select a role and click Load.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAUSAL GRAPH -->
+  <section class="tab-panel" id="causal">
+    <div class="card">
+      <div class="card-head">
+        <div><h3>Causal Attack Graph</h3><p>Full chain reconstruction with counterfactual blame attribution</p></div>
+        <button class="btn-secondary" id="loadCausalBtn">↻ Refresh</button>
+      </div>
+      <div class="card-body">
+        <div id="causalSummary" class="gap-md"></div>
+        <div class="gap-md">
+          <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:10px">Risk Progression</p>
+          <div class="chart-wrap" style="height:160px"><canvas id="chartCausal"></canvas></div>
+        </div>
+        <div id="causalTimeline" class="causal-timeline"><p class="empty-state">Send prompts through Live Firewall first.</p></div>
+        <div id="counterfactualBox"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- POLICY -->
+  <section class="tab-panel" id="policy">
+    <div class="card">
+      <div class="card-head"><div><h3>Policy Matrix</h3><p>RBAC, tool sensitivity, and minimum privilege</p></div></div>
+      <div class="card-body">
+        <div id="guardrailList" class="guardrail-grid gap-md"></div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Tool</th><th>Description</th><th>Min Role</th><th>Base Risk</th><th>Sensitive</th></tr></thead>
+            <tbody id="policyTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section class="tab-panel" id="architecture">
+    <div class="card">
+      <div class="card-head"><div><h3>System Architecture — AI Immune System</h3><p>Multi-layer trust network powered by Claude (Anthropic)</p></div></div>
+      <div class="card-body">
+        <div class="arch-flow">
+          <div class="arch-node n0"><div class="arch-node-icon">👤</div>User / App</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node n1"><div class="arch-node-icon">🛡️</div>Input Firewall<small>LLM Judge · RBAC · Intent Drift</small></div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node n2"><div class="arch-node-icon">🤖</div>AI Agent<small>Trust Token · Memory</small></div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node n1"><div class="arch-node-icon">⚡</div>Output Firewall<small>PII Redact · Blast Radius</small></div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node n3"><div class="arch-node-icon">✓</div>Causal Graph<small>Audit DB</small></div>
+        </div>
+        <div class="arch-notes">
+          <div class="arch-note"><span class="arch-note-tag cyan">Novel</span><h4>Intent Drift</h4><p>Tracks semantic velocity across turns. Catches gradual multi-turn attacks invisible to single-message filters.</p></div>
+          <div class="arch-note"><span class="arch-note-tag orange">Novel</span><h4>Blast Radius</h4><p>Before any action runs, estimates maximum damage if agent is already compromised. Irreversible actions get far higher scrutiny.</p></div>
+          <div class="arch-note"><span class="arch-note-tag red">Novel</span><h4>Adversarial Co-Evolution</h4><p>Red Agent generates paraphrased attacks. Blue Agent writes new rules. Defense evolves automatically.</p></div>
+          <div class="arch-note"><span class="arch-note-tag purple">Novel</span><h4>Causal Attack Graph</h4><p>Builds a DAG of session events. Counterfactuals: "Blocking step 2 prevented steps 3–5." Full explainability.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+<div id="toast" class="toast"></div>
+<script src="/assets/app.js"></script>
+</body>
+</html>
